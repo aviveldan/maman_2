@@ -157,4 +157,4 @@ if __name__ == '__main__':
         for col in current_row:  # iterate over the columns
             print(str(col) + "=" + str(current_row[col]))
     print("9. Dropping all tables - empty database")
-    #dropTable()
+    dropTable()

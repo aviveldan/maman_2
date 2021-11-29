@@ -12,8 +12,12 @@ def createTables():
     conn = None
     try:
         conn = Connector.DBConnector()
-        # conn.execute("CREATE TABLE Users(id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
         conn.execute("CREATE TABLE Teams(id integer UNIQUE)")
+        conn.execute("CREATE TABLE Matches(id integer UNIQUE NOT NULL, competition TEXT NOT NULL, home_id integer NOT NULL, away_id integer NOT NULL )")
+        conn.execute("CREATE TABLE Players(id integer UNIQUE NOT NULL, team_id integer UNIQUE NOT NULL, age integer NOT NULL, height integer NOT NULL, preferred_foot TEXT NOT NULL)")
+        conn.execute("CREATE TABLE Stadiums(id integer UNIQUE NOT NULL, capacity integer NOT NULL, belong_to integer UNIQUE)")
+
+
 
     except DatabaseException.ConnectionInvalid as e:
         print(e)
@@ -37,7 +41,30 @@ def clearTables():
 
 
 def dropTables():
-    pass
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        conn.execute("DROP TABLE IF EXISTS Players CASCADE")
+    except DatabaseException.ConnectionInvalid as e:
+        # do stuff
+        print(e)
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        # do stuff
+        print(e)
+    except DatabaseException.CHECK_VIOLATION as e:
+        # do stuff
+        print(e)
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        # do stuff
+        print(e)
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        # do stuff
+        print(e)
+    except Exception as e:
+        print(e)
+    finally:
+        # will happen any way after code try termination or exception handling
+        conn.close()
 
 
 def addTeam(teamID: int) -> ReturnValue:
@@ -130,3 +157,9 @@ def mostGoalsForTeam(teamID: int) -> List[int]:
 
 def getClosePlayers(playerID: int) -> List[int]:
     pass
+
+
+
+if __name__ == '__main__':
+    print("0. Creating all tables")
+    createTables()
