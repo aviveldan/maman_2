@@ -1,7 +1,7 @@
 import unittest
 import Solution
 from Utility.ReturnValue import ReturnValue
-from Tests.abstractTest import AbstractTest
+from hw2_winter22.abstractTest import AbstractTest
 from Business.Match import Match
 from Business.Stadium import Stadium
 from Business.Player import Player
