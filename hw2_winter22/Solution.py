@@ -26,7 +26,7 @@ def createTables():
             "CREATE TABLE Attendance(match_id integer UNIQUE, stadium_id integer, attendance integer CHECK(attendance>=0), FOREIGN KEY (match_id) REFERENCES Matches(id) ON DELETE CASCADE, FOREIGN KEY (stadium_id) REFERENCES Players(id) ON DELETE CASCADE)")
         conn.execute("CREATE VIEW AverageAttendance AS SELECT stadium_id, AVG(attendance) FROM Attendance GROUP BY stadium_id")
         # Scores JOIN Matches by match_id JOIN stadiums by belong_to
-        conn.execute("CREATE VIEW TotalStadiumGoals AS  SELECT Attendance.stadium_id as s_id ,sum(Scores.goals) as total_goals FROM Attendance JOIN Scores ON Attendance.match_id=Scores.match_id GROUP BY Attendance.stadium_id")
+        conn.execute("CREATE VIEW TotalStadiumGoals AS  SELECT Attendance.stadium_id as s_id ,COALESCE(sum(Scores.goals), 0) as total_goals FROM Attendance LEFT JOIN Scores ON Attendance.match_id=Scores.match_id GROUP BY Attendance.stadium_id")
         conn.execute("CREATE VIEW TotalMatchGoals AS SELECT match_id as m_id, SUM(goals) as sum_goals FROM Scores GROUP BY match_id")
         conn.execute("CREATE VIEW Winners AS SELECT Scores.match_id, Scores.player_id FROM Scores WHERE Scores.goals >= 0.5 *(SELECT sum(sum_goals) FROM TotalMatchGoals WHERE TotalMatchGoals.m_id = Scores.match_id)")
         conn.execute(
@@ -37,11 +37,10 @@ def createTables():
             "CREATE VIEW RichTeams AS SELECT belong_to FROM Stadiums WHERE capacity > 55000")
         conn.execute(
             "CREATE VIEW ActiveTallRichTeams AS SELECT team_id, total FROM ActiveTallTeams JOIN RichTeams ON ActiveTallTeams.team_id = RichTeams.belong_to ")
-        conn.execute(
-            "CREATE VIEW PossiblePopularTeams AS SELECT teams.id as team_id FROM Teams WHERE NOT EXISTS(SELECT * FROM matches LEFT JOIN attendance ON matches.id = attendance.match_id WHERE home_id = teams.id AND match_id is NULL)")
         conn.execute("CREATE VIEW AttendanceTeams AS SELECT home_id, attendance FROM Attendance JOIN Matches ON Attendance.match_id = Matches.id")
-        conn.execute("CREATE VIEW PopularTeams AS SELECT team_id FROM PossiblePopularTeams WHERE Exists (select * from AttendanceTeams WHERE home_id = team_id AND attendance > 44000) AND NOT Exists (select * from AttendanceTeams WHERE home_id = team_id AND attendance <= 44000)")
-        conn.execute("CREATE VIEW neverPlayedTeams AS SELECT teams.id FROM teams WHERE NOT Exists (SELECT * FROM Matches WHERE home_id = teams.id OR away_id = teams.id)")
+        conn.execute("CREATE VIEW BadTeams AS Select Matches.home_id as team_id FROM Matches LEFT OUTER JOIN Attendance ON Matches.id = Attendance.match_id WHERE Attendance.Attendance is NULL OR Attendance.Attendance <= 40000")
+        conn.execute("CREATE VIEW PopularTeams AS SELECT teams.id as team_id FROM Teams EXCEPT SELECT team_id FROM BadTeams")
+
 
     except DatabaseException.ConnectionInvalid as e:
         print(e)
@@ -728,7 +727,7 @@ def popularTeams() -> List[int]:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL(
-            "SELECT id FROM PopularTeams UNION SELECT id FROM neverPlayedTeams ORDER BY id DESC LIMIT 10")
+            "SELECT team_id FROM PopularTeams ORDER BY team_id DESC LIMIT 10")
         rows_effected, res = conn.execute(query)
         for i in range(len(res.rows)):
             m.append(res.rows[i][0])
@@ -751,10 +750,36 @@ def popularTeams() -> List[int]:
 
 
 
-
+# select s_id from totalstadiumgoals order by total_goals desc limit 5
 
 def getMostAttractiveStadiums() -> List[int]:
-    pass
+    conn = None
+    m = []
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL(
+            "SELECT s_id from TotalStadiumGoals ORDER BY total_goals DESC LIMIT 5")
+        rows_effected, res = conn.execute(query)
+        for i in range(len(res.rows)):
+            m.append(res.rows[i][0])
+
+    except DatabaseException.ConnectionInvalid as e:
+        m = []
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        m = []
+    except DatabaseException.CHECK_VIOLATION as e:
+        m = []
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        m = []
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        m = []
+    except Exception as e:
+        m = []
+    finally:
+        conn.close()
+        return m
+
+
 
 
 def mostGoalsForTeam(teamID: int) -> List[int]:
