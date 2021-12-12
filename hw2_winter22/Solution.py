@@ -41,7 +41,6 @@ def createTables():
         conn.execute("CREATE VIEW BadTeams AS Select Matches.home_id as team_id FROM Matches LEFT OUTER JOIN Attendance ON Matches.id = Attendance.match_id WHERE Attendance.Attendance is NULL OR Attendance.Attendance <= 40000")
         conn.execute("CREATE VIEW PopularTeams AS SELECT teams.id as team_id FROM Teams EXCEPT SELECT team_id FROM BadTeams")
 
-
     except DatabaseException.ConnectionInvalid as e:
         print(e)
     except DatabaseException.NOT_NULL_VIOLATION as e:
@@ -57,7 +56,6 @@ def createTables():
     finally:
         # will happen any way after try termination or exception handling
         conn.close()
-
 
 def clearTables():
     conn = None
