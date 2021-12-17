@@ -19,9 +19,9 @@ def createTables():
         conn.execute(
             "CREATE TABLE Players(id integer PRIMARY KEY NOT NULL CHECK(id>0), team_id integer NOT NULL CHECK(team_id>0), age integer NOT NULL CHECK(age>0), height integer NOT NULL CHECK(height>0), preferred_foot TEXT NOT NULL CHECK(preferred_foot = 'Left' OR preferred_foot = 'Right'),FOREIGN KEY (team_id) REFERENCES Teams(id) ON DELETE CASCADE)")
         conn.execute(
-            "CREATE TABLE Stadiums(id integer PRIMARY KEY NOT NULL CHECK(id>0), capacity integer NOT NULL CHECK(capacity>0), belong_to integer UNIQUE, FOREIGN KEY (belong_to) REFERENCES Teams(id))")
+            "CREATE TABLE Stadiums(id integer PRIMARY KEY NOT NULL CHECK(id>0), capacity integer NOT NULL CHECK(capacity>0), belong_to integer UNIQUE, FOREIGN KEY (belong_to) REFERENCES Teams(id) ON DELETE CASCADE)")
         conn.execute(
-            "CREATE TABLE Scores(match_id integer, player_id integer, goals integer CHECK(goals>=0), FOREIGN KEY (match_id) REFERENCES Matches(id), FOREIGN KEY (player_id) REFERENCES Players(id))")
+            "CREATE TABLE Scores(match_id integer, player_id integer, goals integer CHECK(goals>=0), FOREIGN KEY (match_id) REFERENCES Matches(id) ON DELETE CASCADE, FOREIGN KEY (player_id) REFERENCES Players(id) ON DELETE CASCADE)")
         conn.execute(
             "CREATE TABLE Attendance(match_id integer UNIQUE, stadium_id integer, attendance integer CHECK(attendance>=0), FOREIGN KEY (match_id) REFERENCES Matches(id) ON DELETE CASCADE, FOREIGN KEY (stadium_id) REFERENCES Players(id) ON DELETE CASCADE)")
         conn.execute("CREATE VIEW AverageAttendance AS SELECT stadium_id, AVG(attendance) FROM Attendance GROUP BY stadium_id")
