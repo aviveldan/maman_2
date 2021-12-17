@@ -40,6 +40,12 @@ def createTables():
         conn.execute("CREATE VIEW AttendanceTeams AS SELECT home_id, attendance FROM Attendance JOIN Matches ON Attendance.match_id = Matches.id")
         conn.execute("CREATE VIEW BadTeams AS Select Matches.home_id as team_id FROM Matches LEFT OUTER JOIN Attendance ON Matches.id = Attendance.match_id WHERE Attendance.Attendance is NULL OR Attendance.Attendance <= 40000")
         conn.execute("CREATE VIEW PopularTeams AS SELECT teams.id as team_id FROM Teams EXCEPT SELECT team_id FROM BadTeams")
+        conn.execute("CREATE VIEW PlayerGoals AS SELECT players.id as player_id, players.team_id, COALESCE(sum(scores.goals),0) as goals FROM players LEFT JOIN scores ON scores.player_id=players.id GROUP BY players.id, players.team_id")
+        conn.execute("CREATE VIEW PlayersMatches AS select players.id as player_id, COALESCE(scores.match_id, 0) as match_id, COALESCE(scores.goals,0) as goals from players left join scores on scores.player_id=players.id")
+        conn.execute("CREATE VIEW SameMatchesByPlayer AS select A.player_id, count(A.player_id), B.player_id as b_player_id from PlayersMatches A, PlayersMatches B where A.match_id=B.match_id group by A.player_id, B.player_id")
+        conn.execute("CREATE VIEW NoMatchesPlayers AS select A.player_id, count(A.player_id), B.player_id as b_player_id from PlayersMatches A, PlayersMatches B where B.match_id=0 group by A.player_id, B.player_id")
+        conn.execute("CREATE VIEW AllMatchesPlayers AS select * from NoMatchesPlayers union select * from SameMatchesByPlayer")
+
 
     except DatabaseException.ConnectionInvalid as e:
         print(e)
@@ -756,7 +762,7 @@ def getMostAttractiveStadiums() -> List[int]:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL(
-            "SELECT s_id from TotalStadiumGoals ORDER BY total_goals DESC LIMIT 5")
+            "SELECT s_id from TotalStadiumGoals ORDER BY total_goals DESC, s_id ASC LIMIT 5")
         rows_effected, res = conn.execute(query)
         for i in range(len(res.rows)):
             m.append(res.rows[i][0])
@@ -781,11 +787,60 @@ def getMostAttractiveStadiums() -> List[int]:
 
 
 def mostGoalsForTeam(teamID: int) -> List[int]:
-    pass
+    conn = None
+    m = []
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL(
+            "SELECT player_id from PlayerGoals WHERE team_id={tID} ORDER BY goals DESC, player_id DESC LIMIT 5").format(tID=sql.Literal(teamID))
+        rows_effected, res = conn.execute(query)
+        for i in range(len(res.rows)):
+            m.append(res.rows[i][0])
+
+    except DatabaseException.ConnectionInvalid as e:
+        m = []
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        m = []
+    except DatabaseException.CHECK_VIOLATION as e:
+        m = []
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        m = []
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        m = []
+    except Exception as e:
+        m = []
+    finally:
+        conn.close()
+        return m
 
 
 def getClosePlayers(playerID: int) -> List[int]:
-    pass
+    conn = None
+    m = []
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL(
+            "select player_id from AllMatchesPlayers where b_player_id={pID} and player_id <> {pID} and count >= (select count from SameMatchesByPlayer where player_id={pID} and b_player_id={pID})/2 ORDER BY player_id ASC LIMIT 10").format(
+            pID=sql.Literal(playerID))
+        rows_effected, res = conn.execute(query)
+        for i in range(len(res.rows)):
+            m.append(res.rows[i][0])
+
+    except DatabaseException.ConnectionInvalid as e:
+        m = []
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        m = []
+    except DatabaseException.CHECK_VIOLATION as e:
+        m = []
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        m = []
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        m = []
+    except Exception as e:
+        m = []
+    finally:
+        conn.close()
+        return m
 
 
 
