@@ -21,12 +21,13 @@ def createTables():
         conn.execute(
             "CREATE TABLE Stadiums(id integer PRIMARY KEY NOT NULL CHECK(id>0), capacity integer NOT NULL CHECK(capacity>0), belong_to integer UNIQUE, FOREIGN KEY (belong_to) REFERENCES Teams(id) ON DELETE CASCADE)")
         conn.execute(
-            "CREATE TABLE Scores(match_id integer, player_id integer, goals integer CHECK(goals>=0), FOREIGN KEY (match_id) REFERENCES Matches(id) ON DELETE CASCADE, FOREIGN KEY (player_id) REFERENCES Players(id) ON DELETE CASCADE)")
+            "CREATE TABLE Scores(match_id integer, player_id integer, goals integer CHECK(goals>=0),PRIMARY KEY(match_id, player_id), FOREIGN KEY (match_id) REFERENCES Matches(id) ON DELETE CASCADE, FOREIGN KEY (player_id) REFERENCES Players(id) ON DELETE CASCADE)")
         conn.execute(
-            "CREATE TABLE Attendance(match_id integer UNIQUE, stadium_id integer, attendance integer CHECK(attendance>=0), FOREIGN KEY (match_id) REFERENCES Matches(id) ON DELETE CASCADE, FOREIGN KEY (stadium_id) REFERENCES Players(id) ON DELETE CASCADE)")
+            "CREATE TABLE Attendance(match_id integer UNIQUE, stadium_id integer, attendance integer CHECK(attendance>=0),PRIMARY KEY(match_id),  FOREIGN KEY (match_id) REFERENCES Matches(id) ON DELETE CASCADE, FOREIGN KEY (stadium_id) REFERENCES Stadiums(id) ON DELETE CASCADE)")
         conn.execute("CREATE VIEW AverageAttendance AS SELECT stadium_id, AVG(attendance) FROM Attendance GROUP BY stadium_id")
         # Scores JOIN Matches by match_id JOIN stadiums by belong_to
         conn.execute("CREATE VIEW TotalStadiumGoals AS  SELECT Attendance.stadium_id as s_id ,COALESCE(sum(Scores.goals), 0) as total_goals FROM Attendance LEFT JOIN Scores ON Attendance.match_id=Scores.match_id GROUP BY Attendance.stadium_id")
+        conn.execute("CREATE VIEW TotalStadiumGoalsIncludingZeros AS SELECT stadiums.id as stad_id,COALESCE(total_goals, 0) as total_goals FROM stadiums LEFT JOIN TotalStadiumGoals ON stadiums.id=TotalStadiumGoals.s_id")
         conn.execute("CREATE VIEW TotalMatchGoals AS SELECT match_id as m_id, SUM(goals) as sum_goals FROM Scores GROUP BY match_id")
         conn.execute("CREATE VIEW Winners AS SELECT Scores.match_id, Scores.player_id FROM Scores WHERE Scores.goals >= 0.5 *(SELECT sum(sum_goals) FROM TotalMatchGoals WHERE TotalMatchGoals.m_id = Scores.match_id)")
         conn.execute(
@@ -460,7 +461,7 @@ def playerScoredInMatch(match: Match, player: Player, amount: int) -> ReturnValu
     except DatabaseException.UNIQUE_VIOLATION as e:
         r = ReturnValue.ALREADY_EXISTS
     except DatabaseException.FOREIGN_KEY_VIOLATION as e:
-        r = ReturnValue.BAD_PARAMS
+        r = ReturnValue.NOT_EXISTS
     except Exception as e:
         print(e)
     finally:
@@ -526,7 +527,7 @@ def matchInStadium(match: Match, stadium: Stadium, attendance: int) -> ReturnVal
     except DatabaseException.UNIQUE_VIOLATION as e:
         r = ReturnValue.ALREADY_EXISTS
     except DatabaseException.FOREIGN_KEY_VIOLATION as e:
-        r = ReturnValue.BAD_PARAMS
+        r = ReturnValue.NOT_EXISTS
     except Exception as e:
         print(e)
     finally:
@@ -612,7 +613,7 @@ def stadiumTotalGoals(stadiumID: int) -> int:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL(
-            "SELECT total_goals FROM TotalStadiumGoals WHERE s_id = {stadiumID}").format(
+            "SELECT total_goals FROM TotalStadiumGoalsIncludingZeros WHERE stad_id = {stadiumID}").format(
             stadiumID=sql.Literal(stadiumID))
         rows_effected, res = conn.execute(query)
         if rows_effected == 0:
@@ -762,7 +763,7 @@ def getMostAttractiveStadiums() -> List[int]:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL(
-            "SELECT s_id from TotalStadiumGoals ORDER BY total_goals DESC, s_id ASC LIMIT 5")
+            "SELECT stad_id from TotalStadiumGoalsIncludingZeros ORDER BY total_goals DESC, stad_id ASC")
         rows_effected, res = conn.execute(query)
         for i in range(len(res.rows)):
             m.append(res.rows[i][0])
