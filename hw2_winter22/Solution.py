@@ -107,24 +107,59 @@ def dropTables():
         conn.execute("DROP TABLE IF EXISTS Stadiums CASCADE")
         conn.execute("DROP TABLE IF EXISTS Scores CASCADE")
         conn.execute("DROP TABLE IF EXISTS Attendance CASCADE")
+        conn.execute("DROP TABLE IF EXISTS Attendance CASCADE")
+        conn.execute(
+            "DROP VIEW AverageAttendance")
+        conn.execute(
+            "DROP VIEW TotalStadiumGoals")
+        conn.execute(
+            "DROP VIEW TotalStadiumGoalsIncludingZeros")
+        conn.execute(
+            "DROP VIEW TotalMatchGoals")
+        conn.execute(
+            "DROP VIEW Winners")
+        conn.execute(
+            "DROP VIEW ActiveTeams")
+        conn.execute(
+            "DROP VIEW ActiveTallTeams")
+        conn.execute(
+            "DROP VIEW RichTeams")
+        conn.execute(
+            "DROP VIEW ActiveTallRichTeams")
+        conn.execute(
+            "DROP VIEW AttendanceTeams")
+        conn.execute(
+            "DROP VIEW BadTeams")
+        conn.execute(
+            "DROP VIEW PopularTeams")
+        conn.execute(
+            "DROP VIEW PlayerGoals")
+        conn.execute(
+            "DROP VIEW PlayersMatches")
+        conn.execute(
+            "DROP VIEW SameMatchesByPlayer")
+        conn.execute(
+            "DROP VIEW NoMatchesPlayers")
+        conn.execute(
+            "DROP VIEW AllMatchesPlayers")
 
     except DatabaseException.ConnectionInvalid as e:
         # do stuff
-        print(e)
+        pass
     except DatabaseException.NOT_NULL_VIOLATION as e:
         # do stuff
-        print(e)
+        pass
     except DatabaseException.CHECK_VIOLATION as e:
         # do stuff
-        print(e)
+        pass
     except DatabaseException.UNIQUE_VIOLATION as e:
         # do stuff
-        print(e)
+        pass
     except DatabaseException.FOREIGN_KEY_VIOLATION as e:
         # do stuff
-        print(e)
+        pass
     except Exception as e:
-        print(e)
+        pass
     finally:
         # will happen any way after code try termination or exception handling
         conn.close()
